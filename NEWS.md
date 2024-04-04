@@ -1,6 +1,8 @@
 ## Version (development version)
 
- * ...
+### Deprecated and defunct
+
+ * `--port=random` and `--port=uid` are defunct.
 
 
 ## Version 0.16.0 [2024-02-01]

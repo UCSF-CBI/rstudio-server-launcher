@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.0-9000
+### Version: 0.16.0-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1563,10 +1563,10 @@ fi
 ## Validate 'port':
 if [[ "${port}" == "random" ]]; then
     port="port4me"
-    warn "--port=random is deprecated in favor of --port=port4me (default)"
+    error "--port=random is defunct in favor of --port=port4me (default)"
 elif [[ "${port}" == "uid" ]]; then
     port="port4me"
-    warn "--port=uid is deprecated in favor of --port=port4me (default)"
+    error "--port=uid is defunct in favor of --port=port4me (default)"
 elif [[ "${port}" != "port4me" ]]; then
     assert_port "${port}"
 fi
