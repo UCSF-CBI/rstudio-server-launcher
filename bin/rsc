@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.0-9002
+### Version: 0.16.0-9003
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -389,7 +389,7 @@ function remove_stray_pid_file {
     warn_if_check_pid_needs_ssh "${rserver_hostname}"
     mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
     okay=$?
-    mdebug " - checkpid('${pid}', '${rserver_hostname}') exit code: ${okay}"
+    mdebug " - check_pid('${pid}', '${rserver_hostname}') exit code: ${okay}, output='${res[*]}'"
     relay_condition "${res[@]}"
     mapfile -t res < <(prune_debug "${res[@]}")
         
@@ -686,8 +686,9 @@ function rs_process_status {
 	warn_if_check_pid_needs_ssh "${hostname}"
         mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
         okay=$?
-        mdebug " - checkpid('${pid}', '${rserver_hostname}') exit code: ${okay}"
+        mdebug " - check_pid('${pid}', '${rserver_hostname}') exit code: ${okay}, output='${res[*]}'"
         mapfile -t res < <(prune_debug "${res[@]}")
+        mdebug " - prune_debug(): ${res[*]}"
         if [[ -n "${res[0]}" ]]; then
             pid="${res[0]}"
         else
