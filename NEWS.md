@@ -1,5 +1,11 @@
 ## Version (development version)
 
+### Miscellaneous
+
+ * Now `rsc` assert that all files it creates are non-empty. This
+   helps troubleshooting obscure errors, e.g. when user runs out of
+   disk space.
+
 ### Deprecated and defunct
 
  * `--port=random` and `--port=uid` are defunct.

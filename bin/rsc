@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.0-9001
+### Version: 0.16.0-9002
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -284,6 +284,7 @@ function acquire_lock_file {
         error "${msg}"
     fi
     echo "${PPID}" > "${lockfile}"
+    assert_file_is_not_empty "${lockfile}"
 }
 
 function remove_lock_file {
@@ -413,6 +414,7 @@ function make_database_conf {
         ## Default: /var/lib/rstudio-server
         echo "directory=${workdir}/lib"
     } > "${workdir}/database.conf"
+    assert_file_is_not_empty "${workdir}/database.conf"
 }
 
 function make_rserver_conf {
@@ -481,6 +483,7 @@ function make_rserver_conf {
         ## The web port for the RStudio Server
         echo "www-port=${port:?}"
     } > "${workdir}/rserver.conf"
+    assert_file_is_not_empty "${workdir}/rserver.conf"
     
     mdebug "make_rserver_conf() ... done"
 }
@@ -757,6 +760,7 @@ function make_rsession_envs {
     mv "${outfile}.tmp.tmp" "${outfile}"
     rm -f "${outfile}.tmp"
     mdebug "Created: ${outfile} [$(wc -l "${outfile}" | cut -d ' ' -f 1) variables: $(sed -E 's/(^declare -x |=.*$)//g' "${outfile}" | tr $'\n' ' ' | sed -E 's/ $//' | sed 's/ /, /g')]"
+    assert_file_is_not_empty "${outfile}"
 }
 
 function make_rsession_conf {
@@ -772,6 +776,7 @@ function make_rsession_conf {
         ## The default R_LIBS_USER folder that the R session will use
         echo "r-libs-user=${R_LIBS_USER:?}"
     } > "${workdir}/rsession.conf"
+    assert_file_is_not_empty "${workdir}/rsession.conf"
 }
 
 
@@ -837,6 +842,7 @@ set -x
 
 exec rsession "\${@}"
 END
+  assert_file_is_not_empty "${workdir}/rsession.sh"
   
   chmod +x "${workdir}/rsession.sh"
 }
@@ -1099,7 +1105,9 @@ function launch_rserver {
     assert_dir_exists "${workdir}"
 
     hostname > "${workdir}/rserver.hostname"
+    assert_file_is_not_empty "${workdir}/rserver.hostname"
     grep -E "www-port=" "$(config_dir)/rserver.conf" | sed 's/www-port=//' > "${workdir}/rserver.port"
+    assert_file_is_not_empty "${workdir}/rserver.port"
 
     port=$(rserver_port)
     assert_port_free "${port}"
@@ -1114,6 +1122,7 @@ function launch_rserver {
     fi
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
+    assert_file_is_not_empty "${pid_file}"
     rs_pid=$(rserver_pid)
     mdebug "RStudio Server started (PID ${rs_pid})"
 }
@@ -1265,6 +1274,7 @@ function launch_rserver_monitor {
     fi
     pid=$!
     echo "${pid}" > "${pid_file}"
+    assert_file_is_not_empty "${pid_file}"
 
     pid=$(rserver_pid)
     mdebug "rserver monitor started (PID ${pid})"
@@ -1914,10 +1924,12 @@ elif [[ "${action}" == "start" ]]; then
         else
             mdebug "ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             printf "%s\n%s\n" "${rev_hostname}" "${rev_port}" > "$(ssh_revtunnel_spec_file)"
+            assert_file_is_not_empty "$(ssh_revtunnel_spec_file)"
             ssh -o ConnectTimeout="$(ssh_timeout)" -N -R "${rev_spec}" "${rev_hostname}" &
         fi
         ssh_pid=$!
         echo "${ssh_pid}" > "${pid_file}"
+        assert_file_is_not_empty "${pid_file}"
         ssh_pid=$(ssh_revtunnel_pid false)
         mdebug "Reverse SSH tunnel started (PID ${ssh_pid})"
         pids+=("${ssh_pid}")
