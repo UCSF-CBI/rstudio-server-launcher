@@ -6,6 +6,11 @@
    helps troubleshooting obscure errors, e.g. when user runs out of
    disk space.
 
+### Bug Fixes
+
+ * `rsc start --debug` could give an `operand expected (error token is
+   "<pid>")` error on some systems.
+
 ### Deprecated and defunct
 
  * `--port=random` and `--port=uid` are defunct.

@@ -690,7 +690,6 @@ function rs_process_status {
         mapfile -t res < <(prune_debug "${res[@]}")
         mdebug " - prune_debug(): '$(printf "%q" "${res[*]}")'"
         if [[ -n "${res[0]}" ]]; then
-            mdebug " - pid='$(printf "%q" "${res[0]}")'"
             pid="${res[0]}"
         else
             pid=0
