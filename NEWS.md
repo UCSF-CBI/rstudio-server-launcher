@@ -1,3 +1,26 @@
+## Version 0.16.1 [2024-08-20]
+
+### Miscellaneous
+
+ * Now the error message that `rsc stop` produces when it failed to
+   stop an RStudio Server instance running on another machine, will
+   report on both the machine where it thinks RStudio is running and
+   the current machine.
+ 
+ * Now `rsc` assert that all files it creates are non-empty. This
+   helps troubleshooting obscure errors, e.g. when user runs out of
+   disk space.
+
+### Bug Fixes
+
+ * `rsc start --debug` could give an `operand expected (error token is
+   "<pid>")` error on some systems.
+
+### Deprecated and defunct
+
+ * `--port=random` and `--port=uid` are defunct.
+
+
 ## Version 0.16.0 [2024-02-01]
 
 ### New Features

@@ -123,5 +123,5 @@ function relay_condition {
 
 
 function prune_debug {
-    printf "%s\n" "$@" | sed '/DEBUG:/d' | sed -E 's/\x1b(\[[0-9;]*m|\(B)//g'
+    printf "%s\n" "$@" | sed '/DEBUG:/d' | sed 's/\x1b\[[0-9;]*m\x0f//g' | sed -E 's/\x1b(\[[0-9;]*m|\(B)//g'
 }
