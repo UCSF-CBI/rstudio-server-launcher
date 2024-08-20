@@ -2,6 +2,11 @@
 
 ### Miscellaneous
 
+ * Now the error message that `rsc stop` produces when it failed to
+   stop an RStudio Server instance running on another machine, will
+   report on both the machine where it thinks RStudio is running and
+   the current machine.
+ 
  * Now `rsc` assert that all files it creates are non-empty. This
    helps troubleshooting obscure errors, e.g. when user runs out of
    disk space.
