@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.1-9001
+### Version: 0.16.1-9003
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -377,7 +377,7 @@ function remove_stray_pid_file {
 
     ## Nothing to do?
     file="${workdir}/rserver.hostname"
-    mdebug " - rserver hostname file=${file}"
+    mdebug " - rserver hostname file=${file} [$(file_info "${file}")]"
     [[ ! -f "${file}" ]] && return 0;
 
     ## Get rserver hostname
@@ -386,7 +386,7 @@ function remove_stray_pid_file {
     mdebug " - hostname=$(hostname)"
 
     ## If this process is not running, remove the PID file
-    warn_if_check_pid_needs_ssh "${pid}" "${rserver_hostname}"
+    warn_if_check_pid_needs_ssh "${pid}" "${rserver_hostname}" " [${file}: $(file_info "${file}")]"
     mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
     okay=$?
     mdebug " - check_pid('${pid}', '${rserver_hostname}') exit code: ${okay}, output='$(printf "%q" "${res[*]}")'"
@@ -520,10 +520,12 @@ function parse_revtunnel {
 function warn_if_check_pid_needs_ssh {
     local -i pid
     local hostname
+    local info
     pid=${1:-?}
     hostname=${2:-?}
+    info=${3}
     if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
-        warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below. The current machine is $(hostname)"
+        warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive${info}. If you don't have SSH key authentication set up, you will be asked to enter your account password below. The current machine is $(hostname)"
     fi
  }
 
@@ -1798,7 +1800,8 @@ elif [[ "${action}" == "stop" ]]; then
     lockfile=${workdir}/pid.lock
     ## If running, make sure we're stopping from the correct machine
     if [[ -f "${lockfile}" ]] && [[ "$(hostname)" != "$(rserver_hostname)" ]]; then
-        error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from - not from $(hostname)"
+	file="${workdir}/rserver.hostname"
+        error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from - not from $(hostname) [${file}: $(file_info "${file}")]"
     fi
 
     ## Terminate rsession

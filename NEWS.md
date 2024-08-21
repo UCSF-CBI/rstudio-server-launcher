@@ -2,6 +2,10 @@
 
 ### Miscellaneous
 
+ * Now `rsc log` and `rsc stop` give timestamp information on the
+   internally recorded RStudio hostname, whenever they produce a
+   warning.
+
  * Now `rsc log` produces more informative warnings regarding on what
    host it thinks RStudio is running and the current machine.
 
