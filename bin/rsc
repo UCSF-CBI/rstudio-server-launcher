@@ -386,7 +386,7 @@ function remove_stray_pid_file {
     mdebug " - hostname=$(hostname)"
 
     ## If this process is not running, remove the PID file
-    warn_if_check_pid_needs_ssh "${rserver_hostname}"
+    warn_if_check_pid_needs_ssh "${pid}" "${rserver_hostname}"
     mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
     okay=$?
     mdebug " - check_pid('${pid}', '${rserver_hostname}') exit code: ${okay}, output='$(printf "%q" "${res[*]}")'"
@@ -518,8 +518,10 @@ function parse_revtunnel {
 }
 
 function warn_if_check_pid_needs_ssh {
+    local -i pid
     local hostname
-    hostname=${1:-?}
+    pid=${1:-?}
+    hostname=${2:-?}
     if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
         warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below. The current machine is $(hostname)"
     fi
@@ -683,7 +685,7 @@ function rs_process_status {
 
     ## Check if PID is still active?
     if [[ ${pid} -ne 0 ]]; then
-	warn_if_check_pid_needs_ssh "${hostname}"
+	warn_if_check_pid_needs_ssh "${pid}" "${hostname}"
         mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
         okay=$?
         mdebug " - check_pid('${pid}', '${rserver_hostname}') exit code: ${okay}, output='$(printf "%q" "${res[*]}")'"
@@ -1613,6 +1615,10 @@ mdebug "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
 mdebug "RSC_SSH: ${RSC_SSH:-<not set>}"
 mdebug "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
 mdebug "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
+mdebug "_RSC_RSERVER_HOSTNAME_: ${_RSC_RSERVER_HOSTNAME_:-<not set>}"
+mdebug "_RSC_RSERVER_PORT_: ${_RSC_RSERVER_PORT_:-<not set>}"
+mdebug "_RSC_RSERVER_PID_: ${_RSC_RSERVER_PID_:-<not set>}"
+mdebug "_RSC_RSERVER_DATA_DIR_: ${_RSC_RSERVER_DATA_DIR_:-<not set>}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 ## Enable terminal colors, if supported
