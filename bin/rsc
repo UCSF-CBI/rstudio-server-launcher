@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.1-9000
+### Version: 0.16.1-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -521,7 +521,7 @@ function warn_if_check_pid_needs_ssh {
     local hostname
     hostname=${1:-?}
     if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
-        warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
+        warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below. The current machine is $(hostname)"
     fi
  }
 

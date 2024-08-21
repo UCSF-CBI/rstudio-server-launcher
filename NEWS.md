@@ -1,6 +1,9 @@
 ## Version (development version)
 
- * ...
+### Miscellaneous
+
+ * Now `rsc log` produces more informative warnings regarding on what
+   host it thinks RStudio is running and the current machine.
 
 
 ## Version 0.16.1 [2024-08-20]
