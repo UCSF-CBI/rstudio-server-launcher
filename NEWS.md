@@ -1,6 +1,10 @@
 ## Version (development version)
 
- * ...
+### New Features
+
+ * Add environment variable `RSC_RSESSION_TIMEOUT_SUSPEND` to control
+   whether a timed out R session should be suspended to disk. If `1`
+   (default), it will be suspended to disk, otherwise not.
 
 
 ## Version 0.16.2 [2024-08-21]

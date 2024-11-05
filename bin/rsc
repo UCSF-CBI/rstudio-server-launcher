@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.2
+### Version: 0.16.2-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -723,7 +723,6 @@ function rs_process_status {
 
 function rsession_timeout {
     local timeout
-    local bfr
     timeout=${RSC_RSESSION_TIMEOUT}
     
     if [[ -z "${timeout}" ]]; then
@@ -736,6 +735,23 @@ function rsession_timeout {
     RSC_RSESSION_TIMEOUT="${timeout}"
     export RSC_RSESSION_TIMEOUT
     echo "${timeout}"
+}
+
+
+function rsession_timeout_suspend {
+    local value
+    value=${RSC_RSESSION_TIMEOUT_SUSPEND}
+    
+    if [[ -z "${value}" ]]; then
+        ## The default is to suspend
+        value=1
+    fi
+    
+    mdebug "rsession timeout suspend: ${value}"
+    assert_integer "${value}"
+    RSC_RSESSION_TIMEOUT_SUSPEND="${value}"
+    export RSC_RSESSION_TIMEOUT_SUSPEND
+    echo "${value}"
 }
 
 
@@ -777,6 +793,12 @@ function make_rsession_conf {
         ## Number of minutes before a session times out, at which point
         ## the session will either suspend
         echo "session-timeout-minutes=$(rsession_timeout)"
+
+        ## Indicates whether or not to suspend the session after the
+        ## timeout has elapsed. Setting this to false will cause the
+        ## session to quit instead of suspending to disk when the session
+        ## times out. (Type: bool; Default: 1)
+        echo "session-timeout-suspend=$(rsession_timeout_suspend)"
         
         ## The default R_LIBS_USER folder that the R session will use
         echo "r-libs-user=${R_LIBS_USER:?}"
@@ -1713,7 +1735,7 @@ if [[ "${action}" == "config" ]]; then
     echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
     workdir=$(rstudio_config_home)
     echo "RStudio config home: ${workdir}"
-    file=${workdir}/rstudio-prefs.json    
+    file=${workdir}/rstudio-prefs.json
     echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
     if $full && [[ -f "${file}" ]]; then
         cat "${file}"
