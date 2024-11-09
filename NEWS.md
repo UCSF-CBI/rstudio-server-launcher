@@ -6,6 +6,11 @@
    whether a timed out R session should be suspended to disk. If `1`
    (default), it will be suspended to disk, otherwise not.
 
+### Bug Fixes
+
+ * `rsc reset` did not remove the internal `rserver.pid` and
+   `rserver_monitor.pid` files.
+ 
 
 ## Version 0.16.2 [2024-08-21]
 

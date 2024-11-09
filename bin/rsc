@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.2-9001
+### Version: 0.16.2-9002
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1845,7 +1845,7 @@ elif [[ "${action}" == "stop" ]]; then
 elif [[ "${action}" == "reset" ]]; then
     workdir=$(config_dir)
     if [[ -d "${workdir}" ]]; then
-        files=("$(rsession_pid_file)" "${workdir}/rserver.pid""${workdir}/rserver_monitor.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
+        files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver_monitor.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
         if $force; then
             existing=()
             for file in "${files[@]}"; do
