@@ -2,6 +2,13 @@
 
 ### New Features
 
+ * Add support for `rsc reset --user-state-dir`, which will backup
+   the user's RStudio state storage folder
+   (e.g. `~/.local/share/rstudio`) to a dated tar file, and then
+   remove that folder. This can be used as a last resort when the
+   RStudio Server gets stuck at "R is taking longer to start than
+   usual" after logging in.
+
  * Add environment variable `RSC_RSESSION_TIMEOUT_SUSPEND` to control
    whether a timed out R session should be suspended to disk. If `1`
    (default), it will be suspended to disk, otherwise not.

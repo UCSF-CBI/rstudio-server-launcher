@@ -10,7 +10,7 @@
 ###  stop                Stop the RStudio Server and any R and SSH sessions
 ###  status              Check whether the RStudio Server is running or not
 ###  config              Output configuration details
-###  reset               Wipe all configuration
+###  reset               Wipe configuration or storage
 ###  log                 Output rsession log
 ###  
 ### Options:  
@@ -29,7 +29,7 @@
 ###                      should be exposed. (Default: local host and --port)
 ###  --random-password   Generate a random password assigned to 'RSC_PASSWORD'
 ###  --force             Force an action
-###  --full              Output more information
+###  --full              More of the same, e.g. output or file removal
 ###  --no-ssh            Skip anything involving SSH
 ###  
 ###  --env-pattern=<re>  Regular expression matching environment variables to be
@@ -43,6 +43,8 @@
 ###                      argument is only for the instructions on how to set up
 ###                      SSH port forwarding, in case RStudio Server runs on a
 ###                      remote machine
+###  --user-state-data   Causes 'reset' to backup user's RStudio State Storage
+###                      folder to a tar file and the remove the folder
 ### ---
 ###
 ### Example:
@@ -63,7 +65,11 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.16.2-9002
+###  rsc reset
+###  rsc reset --user-state-data
+###  rsc reset --force
+###
+### Version: 0.16.2-9003
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1535,6 +1541,11 @@ while [[ $# -gt 0 ]]; do
         full=true
     elif [[ "$1" == "--no-ssh" ]]; then
         ssh=false
+    elif [[ "$1" == "--user-state-dir" ]]; then
+        if [[ ${action} != "reset" ]]; then
+            error "Option '$1' only works with the 'reset' command"
+        fi
+        action="reset-user-state-dir"
     elif [[ "$1" == "--random-password" ]]; then
         RSC_PASSWORD="random"
     ## Options (--key=value):
@@ -1843,6 +1854,7 @@ elif [[ "${action}" == "stop" ]]; then
     
     message "RStudio Server stopped"
 elif [[ "${action}" == "reset" ]]; then
+    ## Reset the RStudio Server Controller Configuration?
     workdir=$(config_dir)
     if [[ -d "${workdir}" ]]; then
         files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver_monitor.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
@@ -1859,6 +1871,19 @@ elif [[ "${action}" == "reset" ]]; then
             acquire_lock_file
         fi
         rm -rf "${workdir}"
+    fi
+elif [[ "${action}" == "reset-user-state-dir" ]]; then
+    ## Reset the RStudio User State Storage?
+    workdir=$(rstudio_data_home)
+    if [[ -d "${workdir}" ]]; then
+        now=$(date +"%Y%m%dT%H%M%S")
+        dest="rstudio-config_${now}.tar"
+        tar -c -f "${dest}" "${workdir}"
+        if [[ -f "${dest}" ]]; then
+            message "Backed up your personal RStudio User State Storage: ${PWD}/${dest} [$(file_info "${dest}")]"
+            rm -r -f "${workdir}"
+            message "Removed your personal RStudio User State Storage: ${workdir}"
+        fi
     fi
 elif [[ "${action}" == "wait" ]]; then
     wait_for_rserver    
