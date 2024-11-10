@@ -25,6 +25,8 @@
 
  * `rsc reset` did not remove the internal `rserver.pid` and
    `rserver_monitor.pid` files.
+
+ * `rsc config` reported on file sizes with a stray trailing parenthesis.
  
 
 ## Version 0.16.2 [2024-08-21]

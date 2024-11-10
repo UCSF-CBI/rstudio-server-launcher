@@ -52,7 +52,7 @@ function file_info {
         size=$(stat --format="%s" "${file}")
         timestamp=$(stat --format="%Y" "${file}")
         timestamp=$(date -d "@${timestamp}" "+%F %T")
-        echo "${size} bytes; ${timestamp})"
+        echo "${size} bytes; ${timestamp}"
     else
         echo "<not available>"
     fi
