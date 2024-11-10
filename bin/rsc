@@ -10,7 +10,7 @@
 ###  stop                Stop the RStudio Server and any R and SSH sessions
 ###  status              Check whether the RStudio Server is running or not
 ###  config              Output configuration details
-###  reset               Wipe select configurations (backs up, where applicable)
+###  reset               Backup and wipe select configurations
 ###  log                 Output rsession log
 ###  
 ### Options:  
@@ -47,7 +47,7 @@
 ###                      'rsc reset' report on and reset, respectively, where
 ###                      'rsc' specifies the RSC configuration, 'rstudio' the
 ###                      RStudio configuration, and 'user' on the RStudio user
-###                      storage
+###                      settings
 ### ---
 ###
 ### Example:
@@ -75,7 +75,7 @@
 ###  rsc reset --force
 ###  rsc reset --which=user
 ###
-### Version: 0.16.2-9004
+### Version: 0.16.2-9005
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
