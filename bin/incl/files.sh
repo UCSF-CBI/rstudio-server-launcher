@@ -57,3 +57,18 @@ function file_info {
         echo "<not available>"
     fi
 }
+
+function dir_info {
+    local dir=${1:?}
+    local -i size
+    local timestamp
+    
+    if [[ -d "${dir}" ]]; then
+        size=$(du --summarize --bytes "${dir}" | cut -f 1)
+        timestamp=$(stat --format="%Y" "${dir}")
+        timestamp=$(date -d "@${timestamp}" "+%F %T")
+        echo "${size} bytes; ${timestamp}"
+    else
+        echo "<not available>"
+    fi
+}

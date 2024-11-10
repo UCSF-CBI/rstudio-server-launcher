@@ -75,7 +75,7 @@
 ###  rsc reset --force
 ###  rsc reset --which=user
 ###
-### Version: 0.16.2-9005
+### Version: 0.16.2-9006
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1731,7 +1731,7 @@ if [[ "${action}" == "config" ]]; then
             echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
             
             workdir=$(config_dir)
-            echo "config-dir: ${workdir}"
+            echo "config-dir: ${workdir} [$(dir_info "${workdir}")]"
         
             file=${workdir}/pid.lock
             echo "lockfile: ${file} [$(file_info "${file}")]"
@@ -1781,7 +1781,7 @@ if [[ "${action}" == "config" ]]; then
             echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
             echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
             workdir=$(rstudio_config_home)
-            echo "RStudio config home: ${workdir}"
+            echo "RStudio config home: ${workdir} [$(dir_info "${workdir}")]"
             file=${workdir}/rstudio-prefs.json
             echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
             if $full && [[ -f "${file}" ]]; then
@@ -1792,7 +1792,7 @@ if [[ "${action}" == "config" ]]; then
             echo "XDG_DATA_HOME: ${XDG_DATA_HOME:-<not set>}"
             echo "RSTUDIO_DATA_HOME: ${RSTUDIO_DATA_HOME:-<not set>}"
             workdir=$(rstudio_data_home)
-            echo "RStudio data home: ${workdir}"
+            echo "RStudio data home: ${workdir} [$(dir_info "${workdir}")]"
             if $full && [[ -d "${workdir}" ]]; then
                 du --human-readable --si --summarize "${workdir}"/*
                 if [[ -d "${workdir}"/sessions/active/ ]]; then
