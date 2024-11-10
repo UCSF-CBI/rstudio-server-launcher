@@ -10,7 +10,7 @@
 ###  stop                Stop the RStudio Server and any R and SSH sessions
 ###  status              Check whether the RStudio Server is running or not
 ###  config              Output configuration details
-###  reset               Wipe configuration or storage
+###  reset               Wipe select configurations (backs up, where applicable)
 ###  log                 Output rsession log
 ###  
 ### Options:  
@@ -43,8 +43,11 @@
 ###                      argument is only for the instructions on how to set up
 ###                      SSH port forwarding, in case RStudio Server runs on a
 ###                      remote machine
-###  --user-state-data   Causes 'reset' to backup user's RStudio State Storage
-###                      folder to a tar file and the remove the folder
+###  --which=<parts>     Controls which, comma-separated, parts 'rsc config' and
+###                      'rsc reset' report on and reset, respectively, where
+###                      'rsc' specifies the RSC configuration, 'rstudio' the
+###                      RStudio configuration, and 'user' on the RStudio user
+###                      storage
 ### ---
 ###
 ### Example:
@@ -62,14 +65,17 @@
 ###  rsc stop
 ###
 ###  rsc config
+###  rsc config --which=rsc,rstudio,user  (default)
 ###  rsc config --full
+###  rsc config --which=rstudio --full
 ###  rsc log
 ###
 ###  rsc reset
-###  rsc reset --user-state-data
+###  rsc reset --which=rsc                (default)
 ###  rsc reset --force
+###  rsc reset --which=user
 ###
-### Version: 0.16.2-9003
+### Version: 0.16.2-9004
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1489,6 +1495,7 @@ verbose=false
 quiet=false
 args=()
 full=false
+which=()
 port=${RSC_PORT:-port4me}
 localport=${RSC_LOCALPORT:-port}
 field=
@@ -1502,6 +1509,28 @@ ssh=${RSC_SSH:-true}
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
 rsession_inherit_env_pattern=${RSC_ENV_PATTERN:-"^.+$"}
+
+
+parse_opt_which() {
+    local -a parts
+    local part
+    
+    IFS="," read -ra parts <<< "${1:?}"
+    if [[ ${#parts[@]} -eq 0 ]]; then
+        error "Option --which=<values> must not be empty"
+    fi
+    for part in "${parts[@]}"; do
+        case "${part}" in
+            "rsc" | "rstudio" | "user")
+                ;;
+            *)
+                error "Unknown value of --which=<values> option: ${1}"
+                ;;
+        esac
+    done
+    printf "%s\n" "${parts[@]}"
+}
+
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -1517,8 +1546,16 @@ while [[ $# -gt 0 ]]; do
         action="$1"
     elif [[ "$1" == "reset" ]]; then
         action="$1"
+        ## 'rsc reset' defaults to --which="rsc"
+        if [[ ${#which[@]} -eq 0 ]]; then
+            which=(rsc)
+        fi
     elif [[ "$1" == "config" ]]; then
         action="$1"
+        ## 'rsc config' defaults to --which="rsc,rstudio,user"
+        if [[ ${#which[@]} -eq 0 ]]; then
+            which=(rsc rstudio user)
+        fi
     elif [[ "$1" == "log" ]]; then
         action="$1"
 
@@ -1541,11 +1578,6 @@ while [[ $# -gt 0 ]]; do
         full=true
     elif [[ "$1" == "--no-ssh" ]]; then
         ssh=false
-    elif [[ "$1" == "--user-state-dir" ]]; then
-        if [[ ${action} != "reset" ]]; then
-            error "Option '$1' only works with the 'reset' command"
-        fi
-        action="reset-user-state-dir"
     elif [[ "$1" == "--random-password" ]]; then
         RSC_PASSWORD="random"
     ## Options (--key=value):
@@ -1565,6 +1597,8 @@ while [[ $# -gt 0 ]]; do
             rsession_inherit_env_pattern=${value}
         elif [[ "${key}" == "field" ]]; then
             field=${value}
+        elif [[ "${key}" == "which" ]]; then
+            mapfile -t which < <(parse_opt_which "${value}")
         elif [[ "${key}" == "auth" ]]; then
             [[ -z "${auth}" ]] && error "Option '--auth' must not be empty"
             mapfile -t tmp < <(parse_auth "${value}")
@@ -1637,6 +1671,7 @@ mdebug "force: ${force}"
 mdebug "port: ${port}"
 mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
 mdebug "field: ${field}"
+mdebug "which: [n=${#which[@]}] ${which[*]}"
 mdebug "auth: ${auth}"
 mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
 mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
@@ -1668,107 +1703,109 @@ if ! ${force}; then
     remove_stray_pid_file rserver_monitor
     remove_stray_lockfile
     mdebug "Removing stray files ... done"
-fi    
+fi
 
 if [[ "${action}" == "config" ]]; then
-    files=()
-
-    echo "RStudio Server Controller Settings:"
-    echo "RSC_AUTH: ${RSC_AUTH:-<not set>}"
-    echo "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
-    echo "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
-    value=${RSC_PASSWORD:-<not set>}
-    if [[ ${value} != "<not set>" ]] && [[ ${value} != "random" ]]; then
-        value="<masked>"
-    fi
-    echo "RSC_PASSWORD: ${value}"
-    echo "RSC_PORT: ${RSC_PORT:-<not set>}"
-    echo "RSC_RSERVER_TIMEOUT: ${RSC_RSERVER_TIMEOUT:-<not set>}"
-    echo "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
-    echo "RSC_SSH: ${RSC_SSH:-<not set>}"
-    echo "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
-    echo "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
-    
-    echo 
-    echo "RStudio Server Controller Storage:"
-    echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
-    
-    workdir=$(config_dir)
-    echo "config-dir: ${workdir}"
-
-    file=${workdir}/pid.lock
-    echo "lockfile: ${file} [$(file_info "${file}")]"
-
-    file=${workdir}/rserver.conf
-    echo "config-file: ${file} [$(file_info "${file}")]"
-    files+=("${file}")
-
-    file=${workdir}/rsession.conf
-    echo "config-file: ${file} [$(file_info "${file}")]"
-    files+=("${file}")
-
-    file=${workdir}/rsession.sh
-    echo "rsession-sh-file: ${file} [$(file_info "${file}")]"
-    files+=("${file}")
-
-    file=${workdir}/rserver.sh
-    echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
-    files+=("${file}")
-
-    file=${workdir}/rserver.hostname
-    echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
-    files+=("${file}")
-
-    file=${workdir}/rserver.port
-    echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
-    files+=("${file}")
-
-    echo "rserver-pid-file: $(rserver_pid_file) [$(file_info "${file}")]"
-    echo "rsession-pid-file: $(rsession_pid_file) [$(file_info "${file}")]"
-    echo "rsession-log-file: ${workdir}/rsession.log [$(file_info "${file}")]"
-    echo "rserver-monitor-pid-file: $(rserver_monitor_pid_file) [$(file_info "${file}")]"
-
-    if $full; then
-        echo
-        for file in "${files[@]}"; do
-            if [[ -f "${file}" ]]; then
-                ruler "-"
-                echo "${file}"
-                ruler "-"
+    for what in "${which[@]}"; do
+        if [[ ${what} == "rsc" ]]; then
+            files=()
+        
+            echo "RStudio Server Controller Settings:"
+            echo "RSC_AUTH: ${RSC_AUTH:-<not set>}"
+            echo "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
+            echo "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
+            value=${RSC_PASSWORD:-<not set>}
+            if [[ ${value} != "<not set>" ]] && [[ ${value} != "random" ]]; then
+                value="<masked>"
+            fi
+            echo "RSC_PASSWORD: ${value}"
+            echo "RSC_PORT: ${RSC_PORT:-<not set>}"
+            echo "RSC_RSERVER_TIMEOUT: ${RSC_RSERVER_TIMEOUT:-<not set>}"
+            echo "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
+            echo "RSC_SSH: ${RSC_SSH:-<not set>}"
+            echo "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
+            echo "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
+            
+            echo 
+            echo "RStudio Server Controller Storage:"
+            echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
+            
+            workdir=$(config_dir)
+            echo "config-dir: ${workdir}"
+        
+            file=${workdir}/pid.lock
+            echo "lockfile: ${file} [$(file_info "${file}")]"
+        
+            file=${workdir}/rserver.conf
+            echo "config-file: ${file} [$(file_info "${file}")]"
+            files+=("${file}")
+        
+            file=${workdir}/rsession.conf
+            echo "config-file: ${file} [$(file_info "${file}")]"
+            files+=("${file}")
+        
+            file=${workdir}/rsession.sh
+            echo "rsession-sh-file: ${file} [$(file_info "${file}")]"
+            files+=("${file}")
+        
+            file=${workdir}/rserver.sh
+            echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
+            files+=("${file}")
+        
+            file=${workdir}/rserver.hostname
+            echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
+            files+=("${file}")
+        
+            file=${workdir}/rserver.port
+            echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
+            files+=("${file}")
+        
+            echo "rserver-pid-file: $(rserver_pid_file) [$(file_info "${file}")]"
+            echo "rsession-pid-file: $(rsession_pid_file) [$(file_info "${file}")]"
+            echo "rsession-log-file: ${workdir}/rsession.log [$(file_info "${file}")]"
+            echo "rserver-monitor-pid-file: $(rserver_monitor_pid_file) [$(file_info "${file}")]"
+        
+            if $full; then
+                echo
+                for file in "${files[@]}"; do
+                    if [[ -f "${file}" ]]; then
+                        ruler "-"
+                        echo "${file}"
+                        ruler "-"
+                        cat "${file}"
+                    fi
+                done
+            fi
+        elif [[ ${what} == "rstudio" ]]; then
+            echo "RStudio User Configuration:"
+            echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
+            echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
+            workdir=$(rstudio_config_home)
+            echo "RStudio config home: ${workdir}"
+            file=${workdir}/rstudio-prefs.json
+            echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
+            if $full && [[ -f "${file}" ]]; then
                 cat "${file}"
             fi
-        done
-    fi
-
-    echo 
-    echo "RStudio User Configuration:"
-    echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
-    echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
-    workdir=$(rstudio_config_home)
-    echo "RStudio config home: ${workdir}"
-    file=${workdir}/rstudio-prefs.json
-    echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
-    if $full && [[ -f "${file}" ]]; then
-        cat "${file}"
-        echo
-    fi     
-    
-    echo 
-    echo "RStudio User State Storage:"
-    echo "XDG_DATA_HOME: ${XDG_DATA_HOME:-<not set>}"
-    echo "RSTUDIO_DATA_HOME: ${RSTUDIO_DATA_HOME:-<not set>}"
-    workdir=$(rstudio_data_home)
-    echo "RStudio data home: ${workdir}"
-    if $full && [[ -d "${workdir}" ]]; then
-        du --human-readable --si --summarize "${workdir}"/*
-        if [[ -d "${workdir}"/sessions/active/ ]]; then
-            res=$(du --human-readable --si "${workdir}"/sessions/active/*/suspended-session-data/ 2> /dev/null)
-            if [[ -n ${res} ]]; then
-                echo "Suspended RStudio Session Data:"
-                echo "$res"
+        elif [[ ${what} == "user" ]]; then
+            echo "RStudio User State Storage:"
+            echo "XDG_DATA_HOME: ${XDG_DATA_HOME:-<not set>}"
+            echo "RSTUDIO_DATA_HOME: ${RSTUDIO_DATA_HOME:-<not set>}"
+            workdir=$(rstudio_data_home)
+            echo "RStudio data home: ${workdir}"
+            if $full && [[ -d "${workdir}" ]]; then
+                du --human-readable --si --summarize "${workdir}"/*
+                if [[ -d "${workdir}"/sessions/active/ ]]; then
+                    res=$(du --human-readable --si "${workdir}"/sessions/active/*/suspended-session-data/ 2> /dev/null)
+                    if [[ -n ${res} ]]; then
+                        echo "Suspended RStudio Session Data:"
+                        echo "${res}"
+                    fi
+                fi
             fi
         fi
-    fi        
+        echo
+    done                
 elif [[ "${action}" == "log" ]]; then
     workdir=$(config_dir)
     file=${workdir}/rsession.log
@@ -1854,37 +1891,47 @@ elif [[ "${action}" == "stop" ]]; then
     
     message "RStudio Server stopped"
 elif [[ "${action}" == "reset" ]]; then
-    ## Reset the RStudio Server Controller Configuration?
-    workdir=$(config_dir)
-    if [[ -d "${workdir}" ]]; then
-        files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver_monitor.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
-        if $force; then
-            existing=()
-            for file in "${files[@]}"; do
-                [[ -f "${file}" ]] && existing+=("${file}")
-            done
-            mdebug "Files that will be deleted: ${existing[*]}"
-            if [[ ${#existing[@]} -gt 0 ]]; then
-                warn "Deleting rsc folder and files (${existing[*]}) without checking if there is an active RStudio Server instance: ${workdir}"
+    for what in "${which[@]}"; do
+        if [[ ${what} == "rsc" ]]; then
+            ## Reset the RStudio Server Controller Configuration?
+            workdir=$(config_dir)
+            if [[ -d "${workdir}" ]]; then
+                files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver_monitor.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
+                if $force; then
+                    existing=()
+                    for file in "${files[@]}"; do
+                        [[ -f "${file}" ]] && existing+=("${file}")
+                    done
+                    mdebug "Files that will be deleted: ${existing[*]}"
+                    if [[ ${#existing[@]} -gt 0 ]]; then
+                        warn "Deleting rsc folder and files (${existing[*]}) without checking if there is an active RStudio Server instance: ${workdir}"
+                    fi
+                else
+                    acquire_lock_file
+                fi
+                rm -rf "${workdir}"
+            else
+                message "Nothing to do - RStudio Server Controller settings folder does not exist: ${workdir}"
             fi
-        else
-            acquire_lock_file
+        elif [[ ${what} == "rstudio" ]]; then
+            error "rsc reset --which=${what} is not supported"
+        elif [[ ${what} == "user" ]]; then
+            ## Reset the RStudio User State Storage?
+            workdir=$(rstudio_data_home)
+            if [[ -d "${workdir}" ]]; then
+                now=$(date +"%Y%m%dT%H%M%S")
+                dest="rstudio-config_${now}.tar"
+                tar -c -f "${dest}" "${workdir}"
+                if [[ -f "${dest}" ]]; then
+                    message "Backed up your personal RStudio User State Storage: ${PWD}/${dest} [$(file_info "${dest}")]"
+                    rm -r -f "${workdir}"
+                    message "Removed your personal RStudio User State Storage: ${workdir}"
+                fi
+            else
+                message "Nothing to do - RStudio User State Storage folder does not exist: ${workdir}"
+            fi
         fi
-        rm -rf "${workdir}"
-    fi
-elif [[ "${action}" == "reset-user-state-dir" ]]; then
-    ## Reset the RStudio User State Storage?
-    workdir=$(rstudio_data_home)
-    if [[ -d "${workdir}" ]]; then
-        now=$(date +"%Y%m%dT%H%M%S")
-        dest="rstudio-config_${now}.tar"
-        tar -c -f "${dest}" "${workdir}"
-        if [[ -f "${dest}" ]]; then
-            message "Backed up your personal RStudio User State Storage: ${PWD}/${dest} [$(file_info "${dest}")]"
-            rm -r -f "${workdir}"
-            message "Removed your personal RStudio User State Storage: ${workdir}"
-        fi
-    fi
+    done
 elif [[ "${action}" == "wait" ]]; then
     wait_for_rserver    
     rserver_hostname
