@@ -75,7 +75,7 @@
 ###  rsc reset --force
 ###  rsc reset --which=sessions
 ###
-### Version: 0.17.0
+### Version: 0.17.0-9000
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
