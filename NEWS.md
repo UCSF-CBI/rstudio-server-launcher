@@ -1,3 +1,34 @@
+## Version 0.17.0 [2024-11-10]
+
+### New Features
+
+ * Add option `--which=<values>` for `rsc config`, which default to
+   `--which="rsc,rstudio,sessions"`, where `rsc` displays the RStudio
+   Server Controller settings, `rstudio` the RStudio configuration,
+   and `user` on the RStudio sessions storage.
+   
+ * Add option `--which=<values>` for `rsc reset`, which default to
+   support for `rsc reset --which="rsc"`, which resets the RStudio
+   Server Controller settings.  If `sessions`, the user's RStudio
+   sessions folder (e.g. `~/.local/share/rstudio`) to a dated tar
+   file, and then remove that folder. This can be used as a last
+   resort when the RStudio Server gets stuck at "R is taking longer to
+   start than usual" after logging in.
+
+ * Add environment variable `RSC_RSESSION_TIMEOUT_SUSPEND` to control
+   whether a timed out R session should be suspended to disk. If `1`
+   (default), it will be suspended to disk, otherwise not.
+
+ * Now `rsc config` reports also on total directory sizes.
+
+### Bug Fixes
+
+ * `rsc reset` did not remove the internal `rserver.pid` and
+   `rserver_monitor.pid` files.
+
+ * `rsc config` reported on file sizes with a stray trailing parenthesis.
+ 
+
 ## Version 0.16.2 [2024-08-21]
 
 ### Miscellaneous
