@@ -73,9 +73,9 @@
 ###  rsc reset
 ###  rsc reset --which=rsc                   (default)
 ###  rsc reset --force
-###  rsc reset --which=session
+###  rsc reset --which=sessions
 ###
-### Version: 0.16.2-9009
+### Version: 0.17.0
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
