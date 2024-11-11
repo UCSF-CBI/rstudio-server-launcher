@@ -78,11 +78,18 @@ function dir_info {
         size=$(du --summarize --bytes "${dir}" | cut -f 1)
         timestamp=$(stat --format="%Y" "${dir}")
         now=$(date "+%s")
-        age=$(( (now - timestamp) / 3600 ))
-        if [[ ${age} -lt 48 ]]; then
-            age="${age} hours ago"
+        age=$((now - timestamp))
+        age=$((age / 60))
+        if [[ ${age} -lt 120 ]]; then
+            age="${age} minutes ago"
         else
-            age="$((age / 24)) days ago"
+            age=$((age / 60))
+            if [[ ${age} -lt 48 ]]; then
+                age="${age} hours ago"
+            else
+                age=$((age / 24))
+                age="${age} days ago"
+            fi
         fi    
         timestamp=$(date -d "@${timestamp}" "+%F %T")
         echo "${size} bytes; ${timestamp} (${age})"
