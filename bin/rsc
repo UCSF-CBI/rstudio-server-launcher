@@ -1787,6 +1787,9 @@ if [[ "${action}" == "config" ]]; then
             echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
             workdir=$(rstudio_config_home)
             echo "RStudio config home: ${workdir} [$(dir_info "${workdir}")]"
+            if $full && [[ -d "${workdir}" ]]; then
+                du --human-readable --si --summarize "${workdir}"/*
+            fi            
             file=${workdir}/rstudio-prefs.json
             echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
             if $full && [[ -f "${file}" ]]; then

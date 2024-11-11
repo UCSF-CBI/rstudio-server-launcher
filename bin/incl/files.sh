@@ -47,12 +47,21 @@ function file_info {
     local file=${1:?}
     local -i size
     local timestamp
+    local now
+    local age
     
     if [[ -f "${file}" ]]; then
         size=$(stat --format="%s" "${file}")
         timestamp=$(stat --format="%Y" "${file}")
+        now=$(date "+%s")
+        age=$(( (now - timestamp) / 3600 ))
+        if [[ ${age} -lt 48 ]]; then
+            age="${age} hours ago"
+        else
+            age="$((age / 24)) days ago"
+        fi    
         timestamp=$(date -d "@${timestamp}" "+%F %T")
-        echo "${size} bytes; ${timestamp}"
+        echo "${size} bytes; ${timestamp} (${age})"
     else
         echo "<not available>"
     fi
@@ -62,12 +71,21 @@ function dir_info {
     local dir=${1:?}
     local -i size
     local timestamp
+    local now
+    local age
     
     if [[ -d "${dir}" ]]; then
         size=$(du --summarize --bytes "${dir}" | cut -f 1)
         timestamp=$(stat --format="%Y" "${dir}")
+        now=$(date "+%s")
+        age=$(( (now - timestamp) / 3600 ))
+        if [[ ${age} -lt 48 ]]; then
+            age="${age} hours ago"
+        else
+            age="$((age / 24)) days ago"
+        fi    
         timestamp=$(date -d "@${timestamp}" "+%F %T")
-        echo "${size} bytes; ${timestamp}"
+        echo "${size} bytes; ${timestamp} (${age})"
     else
         echo "<not available>"
     fi
