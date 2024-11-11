@@ -46,8 +46,8 @@
 ###  --which=<parts>     Controls which, comma-separated, parts 'rsc config' and
 ###                      'rsc reset' report on and reset, respectively, where
 ###                      'rsc' specifies the RSC configuration, 'rstudio' the
-###                      RStudio configuration, and 'user' on the RStudio user
-###                      settings
+###                      RStudio configuration, and 'sessions' on the RStudio
+###                      sessions storage
 ### ---
 ###
 ### Example:
@@ -65,17 +65,17 @@
 ###  rsc stop
 ###
 ###  rsc config
-###  rsc config --which=rsc,rstudio,user  (default)
+###  rsc config --which=rsc,rstudio,sessions (default)
 ###  rsc config --full
 ###  rsc config --which=rstudio --full
 ###  rsc log
 ###
 ###  rsc reset
-###  rsc reset --which=rsc                (default)
+###  rsc reset --which=rsc                   (default)
 ###  rsc reset --force
-###  rsc reset --which=user
+###  rsc reset --which=session
 ###
-### Version: 0.16.2-9007
+### Version: 0.16.2-9008
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1521,7 +1521,7 @@ parse_opt_which() {
     fi
     for part in "${parts[@]}"; do
         case "${part}" in
-            "rsc" | "rstudio" | "user")
+            "rsc" | "rstudio" | "sessions")
                 ;;
             *)
                 error "Unknown value of --which=<values> option: ${1}"
@@ -1552,9 +1552,9 @@ while [[ $# -gt 0 ]]; do
         fi
     elif [[ "$1" == "config" ]]; then
         action="$1"
-        ## 'rsc config' defaults to --which="rsc,rstudio,user"
+        ## 'rsc config' defaults to --which="rsc,rstudio,sessions"
         if [[ ${#which[@]} -eq 0 ]]; then
-            which=(rsc rstudio user)
+            which=(rsc rstudio sessions)
         fi
     elif [[ "$1" == "log" ]]; then
         action="$1"
@@ -1709,7 +1709,10 @@ if [[ "${action}" == "config" ]]; then
     for what in "${which[@]}"; do
         if [[ ${what} == "rsc" ]]; then
             files=()
-        
+
+            echo "==========================================================="
+            echo "RStudio Server Controller"
+            echo "==========================================================="
             echo "RStudio Server Controller Settings:"
             echo "RSC_AUTH: ${RSC_AUTH:-<not set>}"
             echo "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
@@ -1777,7 +1780,9 @@ if [[ "${action}" == "config" ]]; then
                 done
             fi
         elif [[ ${what} == "rstudio" ]]; then
-            echo "RStudio User Configuration:"
+            echo "==========================================================="
+            echo "RStudio User Configuration"
+            echo "==========================================================="
             echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
             echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
             workdir=$(rstudio_config_home)
@@ -1786,9 +1791,12 @@ if [[ "${action}" == "config" ]]; then
             echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
             if $full && [[ -f "${file}" ]]; then
                 cat "${file}"
+                echo
             fi
-        elif [[ ${what} == "user" ]]; then
-            echo "RStudio User State Storage:"
+        elif [[ ${what} == "sessions" ]]; then
+            echo "==========================================================="
+            echo "RStudio User Sessions"
+            echo "==========================================================="
             echo "XDG_DATA_HOME: ${XDG_DATA_HOME:-<not set>}"
             echo "RSTUDIO_DATA_HOME: ${RSTUDIO_DATA_HOME:-<not set>}"
             workdir=$(rstudio_data_home)
@@ -1915,7 +1923,7 @@ elif [[ "${action}" == "reset" ]]; then
             fi
         elif [[ ${what} == "rstudio" ]]; then
             error "rsc reset --which=${what} is not supported"
-        elif [[ ${what} == "user" ]]; then
+        elif [[ ${what} == "sessions" ]]; then
             ## Reset the RStudio User State Storage?
             workdir=$(rstudio_data_home)
             if [[ -d "${workdir}" ]]; then
@@ -1923,12 +1931,12 @@ elif [[ "${action}" == "reset" ]]; then
                 dest="rstudio-config_${now}.tar"
                 tar -c -f "${dest}" "${workdir}"
                 if [[ -f "${dest}" ]]; then
-                    message "Backed up your personal RStudio User State Storage: ${PWD}/${dest} [$(file_info "${dest}")]"
+                    message "Backed up your personal RStudio sessions storage: ${PWD}/${dest} [$(file_info "${dest}")]"
                     rm -r -f "${workdir}"
-                    message "Removed your personal RStudio User State Storage: ${workdir}"
+                    message "Removed your personal RStudio sessions storage: ${workdir}"
                 fi
             else
-                message "Nothing to do - RStudio User State Storage folder does not exist: ${workdir}"
+                message "Nothing to do - RStudio sessions storage folder does not exist: ${workdir}"
             fi
         fi
     done
