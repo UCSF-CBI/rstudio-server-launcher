@@ -31,7 +31,6 @@
 ###  --force             Force an action
 ###  --full              More of the same, e.g. output or file removal
 ###  --no-ssh            Skip anything involving SSH
-###  
 ###  --env-pattern=<re>  Regular expression matching environment variables to be
 ###                      exported. To export all, use "^.+$". To export none,
 ###                      use "^$". (Default: "^.+$")
@@ -48,6 +47,9 @@
 ###                      'rsc' specifies the RSC configuration, 'rstudio' the
 ###                      RStudio configuration, and 'sessions' on the RStudio
 ###                      sessions storage
+###  --cpu-quota=<quota> Limit CPU quota of R sessions (requires CGroups)
+###  --memory-max=<size> Maximum memory use before R sessions are killed
+###                      (requires CGroups)
 ### ---
 ###
 ### Example:
@@ -75,7 +77,7 @@
 ###  rsc reset --force
 ###  rsc reset --which=sessions
 ###
-### Version: 0.17.0-9000
+### Version: 0.17.0-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1140,6 +1142,8 @@ function launch_rserver {
     local workdir
     local -i rs_pid
     local port
+    local -a cmd
+    
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
@@ -1150,14 +1154,36 @@ function launch_rserver {
 
     port=$(rserver_port)
     assert_port_free "${port}"
+
+    cmd=()
+    
+    if [[ -n ${cpu_quota} ]] || [[ -n ${memory_max} ]]; then
+        mdebug "Launch RStudio Server with CGroups limits:"
+        mdebug "- cpu_quota=${cpu_quota}"
+        mdebug "- memory_max=${memory_max}"
+        if ! command -v systemd-run &> /dev/null; then
+            error "Cannot apply CPU and memory limits to the RStudio Server, because 'systemd-run' was not found"
+        fi
+        cmd=("systemd-run" "--user" "--scope")
+        if [[ -n ${cpu_quota} ]]; then
+            cmd+=("--property=CPUQuota=${cpu_quota}")
+        fi
+        if [[ -n ${memory_max} ]]; then
+            cmd+=("--property=MemoryMax=${memory_max}")
+            cmd+=("--property=MemorySwapMax=${memory_max}")
+        fi
+        mdebug "- Launcher: ${cmd[*]}"
+    fi
+
+    cmd+=("rserver" "--config-file=\"${workdir}/rserver.conf\"")
     
     pid_file=$(rserver_pid_file)
-    mdebug "rserver --config-file=\"${workdir}/rserver.conf\" &"
+    mdebug "${cmd[*]} &"
     if $dryrun; then
-        echo "DRYRUN: rserver --config-file=\"${workdir}/rserver.conf\""
+        echo "DRYRUN: ${cmd[*]}"
         sleep 10 &
     else
-        rserver --config-file="${workdir}/rserver.conf" &
+        eval "${cmd[*]}" &
     fi
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
@@ -1502,6 +1528,8 @@ field=
 auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
 ssh=${RSC_SSH:-true}
+cpu_quota=${RSC_CPU_QUOTA}
+memory_max=${RSC_MEMORY_MAX}
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
@@ -1609,6 +1637,16 @@ while [[ $# -gt 0 ]]; do
         elif [[ "${key}" == "revtunnel" ]]; then
             [[ -z "${value}" ]] && error "Option '--revtunnel' must not be empty"
             mapfile -t revtunnel < <(parse_revtunnel "${value}")
+        elif [[ "${key}" == "cpu-quota" ]]; then
+            cpu_quota=${value}
+            if ! grep -q -E "^[[:digit:]]+%$" <<< "${value}"; then
+                error "Unknown value for option --cpu-quota=${value}"
+            fi
+        elif [[ "${key}" == "memory-max" ]]; then
+            memory_max=${value}
+            if ! grep -q -E "^[[:digit:]]+(|K|M|G|T)$" <<< "${value}"; then
+                error "Unknown value for option --memory-max=${value}"
+            fi
         else
             error "Unknown option: $1"
         fi
@@ -1676,6 +1714,8 @@ mdebug "auth: ${auth}"
 mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
 mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
 mdebug "ssh: ${ssh}"
+mdebug "cpu_quota=${cpu_quota}"
+mdebug "memory_max=${memory_max}"
 mdebug "RSC_AUTH: ${RSC_AUTH:-<not set>}"
 mdebug "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
 mdebug "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
@@ -1685,6 +1725,8 @@ mdebug "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
 mdebug "RSC_SSH: ${RSC_SSH:-<not set>}"
 mdebug "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
 mdebug "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
+mdebug "RSC_CPU_QUOTA: ${RSC_CPU_QUOTA:-<not set>}"
+mdebug "RSC_MEMORY_MAX: ${RSC_MEMORY_MAX:-<not set>}"
 mdebug "_RSC_RSERVER_HOSTNAME_: ${_RSC_RSERVER_HOSTNAME_:-<not set>}"
 mdebug "_RSC_RSERVER_PORT_: ${_RSC_RSERVER_PORT_:-<not set>}"
 mdebug "_RSC_RSERVER_PID_: ${_RSC_RSERVER_PID_:-<not set>}"
